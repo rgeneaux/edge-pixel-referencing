@@ -1,4 +1,4 @@
-function [dODFilt,dOD] = edgeReferenceTransient(Ion,Ioff,Eedge)
+function [dODReferenced,dODMeasured] = edgeReferenceTransient(Ion,Ioff,Eedge)
 %
 % This code implements edge-pixel referencing of a transient absorption
 % experiment, as described in R. Geneaux et al., "Source noise suppression 
@@ -24,8 +24,8 @@ function [dODFilt,dOD] = edgeReferenceTransient(Ion,Ioff,Eedge)
 %   to the edge-pixel region (where there is no transient signal).
 %
 % Outputs:
-%   dODFilt - Filtered transient absorption(size Ntime x Nenergy);
-%   dOD - Raw change in optical absorption
+%   dODReferenced - Filtered transient absorption(size Ntime x Nenergy);
+%   dODMeasured - Raw change in optical absorption
 % ---------------------------------------------
 %
 %   Example:
@@ -34,7 +34,7 @@ function [dODFilt,dOD] = edgeReferenceTransient(Ion,Ioff,Eedge)
 %   % these are the edge-pixel regions
 %   Eedge = ((E<20)&(E>17.5))|((E<50)&(E>48));
 %
-%   [dODFilt,dOD] = edgeReferenceTransient(Ion,Ioff,Eedge)
+%   [dODReferenced,dODMeasured] = edgeReferenceTransient(Ion,Ioff,Eedge)
 %
 % Citation for this code or some of its parts: R. Geneaux et al. "Source noise 
 % suppression in attosecond transient absorption spectroscopy by edge-pixel 
@@ -50,22 +50,21 @@ else
     
     % Define raw dOD
     if size(Ion,1) == 1  %if there is only one average
-        dOD = squeeze(-real(log10(Ion./Ioff)));
+        dODMeasured = squeeze(-real(log10(Ion./Ioff)));
     else
-        dOD = squeeze(mean(-real(log10(Ion./Ioff))));
+        dODMeasured = squeeze(mean(-real(log10(Ion./Ioff))));
     end
-    dOD(isnan(dOD)) = 0; dOD(isinf(dOD)) = 0;
+    dODMeasured(isnan(dODMeasured)) = 0; dODMeasured(isinf(dODMeasured)) = 0;
     
     % Use all shots with pump off to construct an OD calibration set for the noise
     allShotsPumpOff = reshape(permute(Ioff,[2 1 3]),size(Ioff,1)*size(Ioff,2),[]);
-    calibOD = -real(log10(allShotsPumpOff(1:2:(end-1),:)./allShotsPumpOff(2:2:end,:)));
-    
-    % define signal and edge zones
-    edgeZone = calibOD(:,Eedge);
-    signalZone = calibOD;
+   dODCalib = -real(log10(allShotsPumpOff(1:2:(end-1),:)./allShotsPumpOff(2:2:end,:)));
+
+    % define edge zone
+    dODEdgeCalib= dODCalib(:,Eedge);
     
     %check if there is more calibration points than edge pixels
-    [p,m] = size(edgeZone);
+    [p,m] = size(dODEdgeCalib);
     if p <= m
         msg = sprintf(['There are less calibration measurements (' num2str(p) ') than edge-pixels (' num2str(m)...
             '). Reduce size of edge-pixel region or use more calibration points. \nThe covariance matrix does not have full rank (RCond = ' num2str(rcond(cov(edgeZone))) '), results will be inaccurate.']);
@@ -73,13 +72,11 @@ else
         warning('off','MATLAB:nearlySingularMatrix') %turn off redundant default warning
     end
             
-    
-    %compute B matrix
-    B=bsxfun(@minus,signalZone,mean(signalZone))'*bsxfun(@minus,edgeZone,mean(edgeZone))./(size(signalZone,1)-1)/cov(edgeZone);
-    
-    %Apply B
-    Correction = dOD(:,Eedge)*B';
-    dODFilt = dOD - Correction;
+    %compute B matrix using Equ. (3)
+    B= (dODEdgeCalib'*dODEdgeCalib) \ (dODEdgeCalib'*dODCalib);
+
+    %Apply B using Equ. (2)
+    dODReferenced = dODMeasured - dODMeasured(:,Eedge)*B;
     warning('on','MATLAB:nearlySingularMatrix') %turn default warning back on
 end
 end
