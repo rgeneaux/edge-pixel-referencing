@@ -3,7 +3,7 @@ function [dODReferenced,dODMeasured] = edgeReferenceTransient(Ion,Ioff,Eedge)
 % This code implements edge-pixel referencing of a transient absorption
 % experiment, as described in R. Geneaux et al., "Source noise suppression 
 % in attosecond transient absorption spectroscopy by edge-pixel referencing"
-% (to be published)
+% Opt. Express 29, 951-960 (2021) 
 % -----------------
 %
 % This function performs the following:
