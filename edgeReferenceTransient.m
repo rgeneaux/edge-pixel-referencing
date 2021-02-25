@@ -67,7 +67,7 @@ else
     [p,m] = size(dODEdgeCalib);
     if p <= m
         msg = sprintf(['There are less calibration measurements (' num2str(p) ') than edge-pixels (' num2str(m)...
-            '). Reduce size of edge-pixel region or use more calibration points. \nThe covariance matrix does not have full rank (RCond = ' num2str(rcond(cov(edgeZone))) '), results will be inaccurate.']);
+            '). Reduce size of edge-pixel region or use more calibration points. \nThe covariance matrix does not have full rank (RCond = ' num2str(rcond(cov(dODEdgeCalib))) '), results will be inaccurate.']);
         warning(msg);
         warning('off','MATLAB:nearlySingularMatrix') %turn off redundant default warning
     end
